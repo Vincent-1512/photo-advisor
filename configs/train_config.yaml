@@ -1,0 +1,59 @@
+# ============================================================
+# Audio Deepfake Detection — Training Configuration
+# ============================================================
+# File này có thể override các giá trị mặc định trong src/config.py
+# Dùng cho: thay đổi hyperparameter giữa các thí nghiệm mà không sửa code
+
+# --- Audio Processing ---
+audio:
+  sample_rate: 16000        # Hz
+  duration: 4.0             # seconds
+  n_fft: 512
+  hop_length: 160           # = 10ms at 16kHz
+  win_length: 400           # = 25ms at 16kHz
+  n_mels: 80
+  n_lfcc: 60
+  n_filter: 128
+  fmin: 0.0
+  fmax: 8000.0
+  pre_emphasis: 0.97
+
+# --- Feature ---
+feature:
+  type: "lfcc"              # "lfcc" | "melspec"
+
+# --- Model ---
+model:
+  backbone: "lcnn"          # "lcnn" | "resnet18" | "rawnet2"
+  feature_dim: 64           # Shared feature vector size
+
+# --- Training ---
+training:
+  batch_size: 32
+  num_workers: 2            # Colab thường dùng 2
+  epochs: 30
+  learning_rate: 0.0001     # 1e-4
+  weight_decay: 0.00001     # 1e-5
+  optimizer: "adamw"
+  scheduler: "cosine"
+  warmup_epochs: 2
+  early_stopping_patience: 5
+  gradient_clip: 1.0
+  seed: 42
+
+# --- Multi-task Loss Weights ---
+loss:
+  alpha_binary: 1.0         # Level 1 (Binary)
+  beta_attack: 0.5          # Level 2 (Attack Type)
+  gamma_model: 0.3          # Level 3 (Model Attribution)
+  delta_center: 0.01        # Center Loss
+
+# --- Paths (relative to project root) ---
+paths:
+  data_dir: "data"
+  asvspoof_dir: "data/asvspoof2019"
+  wavefake_dir: "data/wavefake"
+  processed_dir: "data/processed"
+  output_dir: "outputs"
+  checkpoint_dir: "outputs/checkpoints"
+  log_dir: "outputs/logs"
