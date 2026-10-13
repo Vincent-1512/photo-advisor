@@ -1,0 +1,177 @@
+{
+  "dataset_metadata": {
+    "manifest_version": "v1.0.0",
+    "dataset_name": "diagnostic_portrait_smoke_set_v0",
+    "purpose": "Template chẩn đoán 8–12 ảnh người thật; không chứa ảnh, nhãn hoặc consent đã xác minh.",
+    "total_target_samples": 12,
+    "current_status": "TEMPLATE_PENDING_REAL_PHOTOS",
+    "consent_policy": "Mọi ảnh người thật nạp vào bộ chẩn đoán bắt buộc phải có sự đồng thuận rõ ràng (explicit consent) của chủ thể ảnh cho mục đích nghiên cứu/kỹ thuật."
+  },
+  "sampling_specifications": {
+    "framing_distribution": {
+      "close_up": "2-3 ảnh (cận mặt / chân dung biểu cảm)",
+      "medium_shot": "2-3 ảnh (nửa người từ thắt lưng trở lên)",
+      "full_body": "2-3 ảnh (toàn thân đứng / ngồi)",
+      "environmental": "2-3 ảnh (người trong bối cảnh rộng / du lịch)"
+    },
+    "lighting_coverage": [
+      "backlit (ngược sáng mạnh)",
+      "street_urban (ngoài phố, ánh sáng phức tạp)",
+      "nature_trees (tán cây, bóng râm xen kẽ)",
+      "well_lit (ánh sáng chuẩn, ảnh chất lượng tốt sẵn)"
+    ],
+    "goals_evaluated": [
+      "person_first (ưu tiên nổi bật chủ thể, cho phép crop cân đối)",
+      "keep_context (giữ trọn bối cảnh xung quanh, hạn chế crop)"
+    ]
+  },
+  "items": [
+    {
+      "image_id": "diag_p01_closeup_well_lit",
+      "relative_path": "diagnostic_inputs/diag_p01.jpg",
+      "sha256": "PENDING_INPUT_CHECKSUM",
+      "dimensions": {
+        "width": 0,
+        "height": 0
+      },
+      "framing": "close_up",
+      "lighting_condition": "well_lit",
+      "background_type": "clean_minimal",
+      "initial_quality": "good_as_is",
+      "consent_confirmed": false,
+      "evaluation_goals": [
+        "person_first"
+      ],
+      "status": "AWAITING_COLLECTION"
+    },
+    {
+      "image_id": "diag_p02_closeup_backlit",
+      "relative_path": "diagnostic_inputs/diag_p02.jpg",
+      "sha256": "PENDING_INPUT_CHECKSUM",
+      "dimensions": {
+        "width": 0,
+        "height": 0
+      },
+      "framing": "close_up",
+      "lighting_condition": "backlit",
+      "background_type": "nature_trees",
+      "initial_quality": "needs_exposure_fix",
+      "consent_confirmed": false,
+      "evaluation_goals": [
+        "person_first"
+      ],
+      "status": "AWAITING_COLLECTION"
+    },
+    {
+      "image_id": "diag_p03_medium_urban",
+      "relative_path": "diagnostic_inputs/diag_p03.jpg",
+      "sha256": "PENDING_INPUT_CHECKSUM",
+      "dimensions": {
+        "width": 0,
+        "height": 0
+      },
+      "framing": "medium_shot",
+      "lighting_condition": "mixed",
+      "background_type": "street_urban",
+      "initial_quality": "good_as_is",
+      "consent_confirmed": false,
+      "evaluation_goals": [
+        "person_first",
+        "keep_context"
+      ],
+      "status": "AWAITING_COLLECTION"
+    },
+    {
+      "image_id": "diag_p04_medium_nature_backlit",
+      "relative_path": "diagnostic_inputs/diag_p04.jpg",
+      "sha256": "PENDING_INPUT_CHECKSUM",
+      "dimensions": {
+        "width": 0,
+        "height": 0
+      },
+      "framing": "medium_shot",
+      "lighting_condition": "backlit",
+      "background_type": "nature_trees",
+      "initial_quality": "needs_exposure_fix",
+      "consent_confirmed": false,
+      "evaluation_goals": [
+        "person_first"
+      ],
+      "status": "AWAITING_COLLECTION"
+    },
+    {
+      "image_id": "diag_p05_fullbody_urban",
+      "relative_path": "diagnostic_inputs/diag_p05.jpg",
+      "sha256": "PENDING_INPUT_CHECKSUM",
+      "dimensions": {
+        "width": 0,
+        "height": 0
+      },
+      "framing": "full_body",
+      "lighting_condition": "well_lit",
+      "background_type": "street_urban",
+      "initial_quality": "needs_crop",
+      "consent_confirmed": false,
+      "evaluation_goals": [
+        "person_first",
+        "keep_context"
+      ],
+      "status": "AWAITING_COLLECTION"
+    },
+    {
+      "image_id": "diag_p06_fullbody_nature",
+      "relative_path": "diagnostic_inputs/diag_p06.jpg",
+      "sha256": "PENDING_INPUT_CHECKSUM",
+      "dimensions": {
+        "width": 0,
+        "height": 0
+      },
+      "framing": "full_body",
+      "lighting_condition": "low_light",
+      "background_type": "nature_trees",
+      "initial_quality": "needs_exposure_fix",
+      "consent_confirmed": false,
+      "evaluation_goals": [
+        "keep_context"
+      ],
+      "status": "AWAITING_COLLECTION"
+    },
+    {
+      "image_id": "diag_p07_wideshot_travel",
+      "relative_path": "diagnostic_inputs/diag_p07.jpg",
+      "sha256": "PENDING_INPUT_CHECKSUM",
+      "dimensions": {
+        "width": 0,
+        "height": 0
+      },
+      "framing": "environmental",
+      "lighting_condition": "well_lit",
+      "background_type": "nature_trees",
+      "initial_quality": "good_as_is",
+      "consent_confirmed": false,
+      "evaluation_goals": [
+        "keep_context",
+        "person_first"
+      ],
+      "status": "AWAITING_COLLECTION"
+    },
+    {
+      "image_id": "diag_p08_wideshot_urban_backlit",
+      "relative_path": "diagnostic_inputs/diag_p08.jpg",
+      "sha256": "PENDING_INPUT_CHECKSUM",
+      "dimensions": {
+        "width": 0,
+        "height": 0
+      },
+      "framing": "environmental",
+      "lighting_condition": "backlit",
+      "background_type": "street_urban",
+      "initial_quality": "needs_crop",
+      "consent_confirmed": false,
+      "evaluation_goals": [
+        "keep_context"
+      ],
+      "status": "AWAITING_COLLECTION"
+    }
+  ]
+}

@@ -1,0 +1,175 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PhotoAdvisorVLMOutputSchemaV1",
+  "description": "Structured output schema for Phase 02B Vision-Language Model Photo Advisor.",
+  "type": "object",
+  "required": [
+    "analysis",
+    "keep_original",
+    "recommendations",
+    "retake_advice"
+  ],
+  "properties": {
+    "analysis": {
+      "type": "object",
+      "required": [
+        "framing",
+        "subject_description",
+        "background_description",
+        "lighting_condition",
+        "uncertainty"
+      ],
+      "properties": {
+        "framing": {
+          "type": "string",
+          "enum": [
+            "close_up",
+            "medium_shot",
+            "full_body",
+            "environmental",
+            "unknown"
+          ],
+          "description": "Cỡ cảnh quan sát được trong ảnh."
+        },
+        "subject_description": {
+          "type": "string",
+          "description": "Mô tả khách quan chủ thể chính (số lượng người, tư thế, vị trí)."
+        },
+        "background_description": {
+          "type": "string",
+          "description": "Mô tả bối cảnh hậu cảnh (trong nhà, ngoài trời, cây cỏ, phố xá)."
+        },
+        "lighting_condition": {
+          "type": "string",
+          "enum": [
+            "well_lit",
+            "backlit",
+            "low_light",
+            "harsh_sunlight",
+            "mixed"
+          ],
+          "description": "Điều kiện ánh sáng quan sát được."
+        },
+        "uncertainty": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Điểm không chắc chắn do mờ, thiếu sáng hoặc bối cảnh không đủ thông tin."
+        }
+      },
+      "additionalProperties": false
+    },
+    "keep_original": {
+      "type": "object",
+      "required": [
+        "recommended",
+        "reason"
+      ],
+      "properties": {
+        "recommended": {
+          "type": "boolean",
+          "description": "True nếu ảnh gốc đã đạt chất lượng tốt, nên giữ nguyên không chỉnh sửa."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Lý do khuyến nghị giữ gốc hoặc lý do cần can thiệp."
+        }
+      },
+      "additionalProperties": false
+    },
+    "recommendations": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 2,
+      "description": "Danh sách các phương án chỉnh sửa (tối đa 2 phương án). Có thể rỗng nếu nên giữ gốc.",
+      "items": {
+        "type": "object",
+        "required": [
+          "option_id",
+          "name",
+          "rationale",
+          "recipe"
+        ],
+        "properties": {
+          "option_id": {
+            "type": "string",
+            "enum": [
+              "option_1",
+              "option_2"
+            ],
+            "description": "Định danh phương án (option_1 là chính, option_2 là phụ/thay thế)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Tên gợi nhớ của phương án (ví dụ: Chân dung tự nhiên ấm áp, Tăng sáng hậu cảnh nhẹ)."
+          },
+          "rationale": {
+            "type": "string",
+            "description": "Giải thích căn cứ kỹ thuật và mục đích của phương án bằng tiếng Việt."
+          },
+          "recipe": {
+            "type": "object",
+            "required": [
+              "pipeline_version",
+              "exposure",
+              "contrast",
+              "saturation",
+              "crop"
+            ],
+            "properties": {
+              "pipeline_version": {
+                "type": "string",
+                "enum": [
+                  "pipeline_v0"
+                ]
+              },
+              "exposure": {
+                "type": "number",
+                "minimum": -1.5,
+                "maximum": 1.5,
+                "description": "Bù trừ phơi sáng sRGB trong khoảng [-1.5, 1.5]."
+              },
+              "contrast": {
+                "type": "number",
+                "minimum": 0.7,
+                "maximum": 1.3,
+                "description": "Hệ số tương phản trong khoảng [0.7, 1.3] (1.0 là gốc)."
+              },
+              "saturation": {
+                "type": "number",
+                "minimum": 0.8,
+                "maximum": 1.3,
+                "description": "Hệ số bão hòa màu trong khoảng [0.8, 1.3] (1.0 là gốc)."
+              },
+              "crop": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "number",
+                  "minimum": 0.0,
+                  "maximum": 1.0
+                },
+                "minItems": 4,
+                "maxItems": 4,
+                "description": "Tọa độ cắt cúp chuẩn hóa [ymin, xmin, ymax, xmax] trong khoảng [0.0, 1.0] hoặc null."
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "retake_advice": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Lời khuyên riêng biệt về góc máy, dáng đứng, nguồn sáng cho lần chụp sau. Không kèm preview giả."
+    }
+  },
+  "additionalProperties": false
+}

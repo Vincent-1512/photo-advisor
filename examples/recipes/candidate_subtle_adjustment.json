@@ -1,0 +1,12 @@
+{
+  "model_id": "qwen-2.5-vl-7b-instruct-fixture",
+  "prompt_version": "prompt_v0",
+  "recipe": {
+    "pipeline_version": "pipeline_v0",
+    "exposure": -0.15,
+    "contrast": 1.03,
+    "saturation": 1.02,
+    "crop": [0.02, 0.02, 0.98, 0.98]
+  },
+  "advice_text": "Ảnh chân dung ngoài trời hơi dư sáng nền. Đề xuất hạ nhẹ độ sáng (-0.15 EV equiv), tăng nhẹ tương phản (1.03) và độ tươi tắn của da (1.02), crop nhẹ 2% biên để tập trung chủ thể."
+}

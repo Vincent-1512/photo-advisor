@@ -1,0 +1,12 @@
+{
+  "model_id": "internvl-2.5-8b-fixture",
+  "prompt_version": "prompt_v0",
+  "recipe": {
+    "pipeline_version": "pipeline_v0",
+    "exposure": 0.85,
+    "contrast": 1.10,
+    "saturation": 1.05,
+    "crop": null
+  },
+  "advice_text": "Thử nghiệm tăng sáng mạnh toàn cảnh +0.85 EV (Mục đích: kiểm thử tính năng tự động phát hiện cháy sáng Delta Clipping > 0.01 và kích hoạt Fallback No-op an toàn)."
+}

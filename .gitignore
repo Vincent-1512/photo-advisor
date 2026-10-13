@@ -1,55 +1,28 @@
-# ============================================================
-# Audio Deepfake Detection — .gitignore
-# ============================================================
+# Local history, private inputs and generated runs
+/archive/
+/work/
+/data/
+/phase02b_colab_artifacts*/
+*.zip
 
-# --- Python ---
+# Python, notebooks and editors
 __pycache__/
 *.py[cod]
-*.egg-info/
-dist/
-build/
-*.egg
-.eggs/
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+.DS_Store
+.idea/
+.vscode/
 
-# --- Data (KHÔNG push data lên GitHub) ---
-data/
-*.wav
-*.flac
-*.mp3
+# Credentials and model checkpoints
+.env
+.env.*
+!.env.example
+*.pem
+*.key
 *.pt
-*.npy
-*.npz
-
-# --- Output ---
-outputs/
-*.png
-*.jpg
-*.pdf
-
-# --- Model Checkpoints ---
 *.pth
 *.ckpt
-*.bin
-*.h5
-
-# --- Environment ---
-.env
-venv/
-.venv/
-env/
-
-# --- IDE ---
-.vscode/
-.idea/
-*.swp
-*.swo
-.DS_Store
-
-# --- Jupyter ---
-.ipynb_checkpoints/
-*.ipynb
-
-# --- Logs ---
-*.log
-wandb/
-runs/
+*.safetensors
