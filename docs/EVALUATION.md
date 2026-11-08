@@ -21,7 +21,7 @@ Ghi ít nhất image ID, đường dẫn riêng, checksum, dimensions, cỡ cả
 
 ## So sánh công bằng
 
-Mỗi ảnh so sánh No-op, rule baseline và tối đa hai phương án VLM qua cùng processor. Ghi đúng requested/effective recipe và phương án bị fallback. Lời khuyên chụp lại đánh giá riêng, không dùng ảnh giả làm đối chứng.
+Trong thí nghiệm đánh giá nguồn VLM, mỗi ảnh so sánh No-op, rule baseline và tối đa hai phương án do VLM sinh qua cùng processor. Giới hạn hai phương án chỉ áp dụng cho đầu ra VLM. Thiết kế sản phẩm tương lai có thể kết hợp nguồn thành ảnh gốc + 0–5 phong cách, nhưng selector chưa triển khai; không dùng kết quả đánh giá này để khẳng định tính đa dạng hay hiệu quả của selector. Ghi đúng requested/effective recipe và phương án bị fallback. Lời khuyên chụp lại đánh giá riêng, không dùng ảnh giả làm đối chứng.
 
 Tách nhóm/person/session giữa train/dev/test nếu sau này training; không để ảnh gần trùng, crop hoặc augmentation của cùng ảnh xuất hiện ở cả hai phía. Pilot dùng chỉnh prompt là dev, không phải test khóa.
 

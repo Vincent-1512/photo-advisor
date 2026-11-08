@@ -1,6 +1,6 @@
 # Photo Advisor
 
-Trợ lý cải thiện ảnh chụp điện thoại: xem ảnh và mục tiêu của người dùng, giải thích điểm có thể cải thiện, đề xuất tối đa hai công thức chỉnh sửa và tạo preview để so sánh với ảnh giữ gốc.
+Photo Advisor phân tích ảnh chụp điện thoại và tạo bộ lựa chọn gồm ảnh gốc cùng 0–5 phong cách chỉnh sửa (mặc định 4, cấu hình 4 hoặc 5) để người dùng tự chọn. Các phong cách ngang hàng; hệ thống không xếp hạng hay chọn hộ phong cách “tốt nhất”. Phần VLM vẫn chỉ sinh tối đa hai recipe.
 
 MVP ưu tiên **ảnh có người trong bối cảnh thực tế**: cận mặt, nửa người, toàn thân và người trong cảnh rộng. Người dùng có thể giữ ảnh gốc; dự án không coi một phong cách là chuẩn đẹp cho tất cả mọi người.
 
@@ -36,7 +36,7 @@ PYTHONPATH=src python -m photo_advisor.cli \
   --output-dir work/demo-mock-01
 ```
 
-Mở `work/demo-mock-01/index.html` để so sánh giữ gốc, rule baseline và các phương án mock. Khi chạy lại, chọn thư mục output mới: pipeline chủ động từ chối ghi đè artifacts.
+Mở `work/demo-mock-01/index.html` để so sánh ảnh gốc, rule baseline và phương án mock mà pipeline hiện có tạo ra. Bộ chọn 0–5 phong cách là thiết kế hợp đồng tương lai, chưa được triển khai trong pipeline. Khi chạy lại, chọn thư mục output mới: pipeline chủ động từ chối ghi đè artifacts.
 
 Chạy với ảnh JPEG/PNG của bạn nhưng vẫn dùng mock:
 
