@@ -26,3 +26,21 @@ venv/
 *.pth
 *.ckpt
 *.safetensors
+
+# Local backend uploads and generated mobile artifacts
+backend/storage/
+mobile/build/
+mobile/.dart_tool/
+
+# Private and generated data science artifacts
+data_science/**/*.parquet
+data_science/private/
+*.sqlite3
+data_science/**/*.jpg
+data_science/**/*.jpeg
+data_science/**/*.png
+data_science/**/*.heic
+!data_science/tests/fixtures/**/*.jpg
+!data_science/tests/fixtures/**/*.jpeg
+!data_science/tests/fixtures/**/*.png
+!data_science/tests/fixtures/**/*.heic

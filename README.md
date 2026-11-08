@@ -64,15 +64,24 @@ Các tests dùng ảnh tổng hợp/mock/stub. Chúng kiểm tra tính đúng c�
 ```text
 photo-advisor/
 ├── README.md
-├── requirements.txt            # Demo/processor offline
-├── requirements-test.txt       # Full test suite
-├── src/photo_advisor/          # Pipeline, VLM, validator, processor, report
-├── prompts/                    # System prompt và output schema có phiên bản
-├── notebooks/                  # Notebook Colab GPU
-├── tests/                      # Unit/integration/regression tests
-├── examples/recipes/           # Recipe fixtures, không phải inference thật
-└── docs/                       # Tài liệu cho nhóm và nghiên cứu
+├── CONTRIBUTING.md              # Quy ước nhánh, commit và kiểm thử
+├── requirements.txt             # Demo/processor offline
+├── requirements-test.txt        # Full test suite
+├── backend/                     # Backend API mẫu; storage local bị bỏ qua
+│   └── db/                      # Hợp đồng schema SQLite
+├── data_science/                # Môn 3: dữ liệu và khoa học dữ liệu
+├── mobile/                      # Môn 4: ứng dụng Flutter và mock server
+├── src/photo_advisor/           # Pipeline, VLM, validator, processor, report
+│   └── ops/                     # Các thao tác ảnh mức A
+├── prompts/                     # System prompt và output schema có phiên bản
+├── notebooks/                   # Notebook Colab GPU
+├── tests/                       # Unit/integration/regression tests
+├── examples/recipes/            # Recipe fixtures, không phải inference thật
+└── docs/                        # Tài liệu nhóm, môn học, hợp đồng và nghiên cứu
 ```
+
+- Tài liệu môn học: [docs/courses/](docs/courses/)
+- Hợp đồng API: [docs/contracts/](docs/contracts/)
 
 `work/` chứa output, `data/` chứa ảnh riêng của nhóm và `archive/` chứa lịch sử local. Các thư mục này được bỏ qua khi commit. Ảnh trong `tests/fixtures/` là ảnh tổng hợp.
 
