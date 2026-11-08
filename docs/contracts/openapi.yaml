@@ -1,0 +1,654 @@
+openapi: 3.0.3
+info:
+  title: Photo Advisor API
+  version: 1.0.0
+  description: >-
+    Hợp đồng đề xuất cổng G1; selector bộ phong cách chưa triển khai. Chưa có API server.
+    Ảnh chỉ được lưu tạm ngoài SQLite; provider_type phân biệt mock, replay và real.
+servers:
+  - url: https://api.example.invalid
+    description: Placeholder; thay bằng URL triển khai trước khi sinh client.
+tags:
+  - name: Jobs
+  - name: Feedback
+  - name: Health
+paths:
+  /v1/jobs:
+    post:
+      tags: [Jobs]
+      operationId: createJob
+      summary: Tạo lượt phân tích ảnh
+      description: Multipart JPEG/PNG tối đa 15 MiB. Idempotency không được hỗ trợ; mỗi request hợp lệ tạo job mới.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image, goal, consent]
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: JPEG hoặc PNG, tối đa 15 MiB (15,728,640 bytes).
+                goal:
+                  $ref: '#/components/schemas/Goal'
+                consent:
+                  type: boolean
+                  enum: [true]
+                  description: Bắt buộc true để gửi ảnh xử lý.
+            encoding:
+              image:
+                contentType: image/jpeg, image/png
+            examples:
+              portrait:
+                summary: Ảnh chân dung đồng thuận xử lý
+                value:
+                  image: (binary)
+                  goal: natural_portrait
+                  consent: true
+      responses:
+        '202':
+          description: Job đã được xếp hàng.
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAccepted'
+              example:
+                job_id: job_01JAZ8M4T2K7
+                status: queued
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /v1/jobs/{job_id}:
+    parameters:
+      - $ref: '#/components/parameters/JobId'
+    get:
+      tags: [Jobs]
+      operationId: getJob
+      summary: Lấy trạng thái và kết quả job
+      responses:
+        '200':
+          description: Trạng thái hiện tại; result chỉ có khi succeeded.
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+              examples:
+                running:
+                  value:
+                    job_id: job_01JAZ8M4T2K7
+                    status: running
+                    provider_type: mock
+                    error: null
+                    result: null
+                succeeded:
+                  value:
+                    job_id: job_01JAZ8M4T2K7
+                    status: succeeded
+                    provider_type: mock
+                    error: null
+                    result:
+                      analysis:
+                        framing: medium_shot
+                        subject_description: Một người đứng ở giữa khung hình.
+                        background_description: Công viên ngoài trời.
+                        lighting_condition: well_lit
+                        uncertainty: null
+                      keep_original:
+                        recommended: true
+                        reason: Có thể giữ ảnh gốc nếu phù hợp sở thích.
+                      candidates:
+                        - candidate_id: candidate_01JAZ8N2
+                          source: noop
+                          option_id: null
+                          name: Giữ ảnh gốc
+                          rationale: Không chỉnh sửa.
+                          requested_recipe:
+                            pipeline_version: pipeline_v0
+                            exposure: 0
+                            contrast: 1
+                            saturation: 1
+                            crop: null
+                          effective_recipe:
+                            pipeline_version: pipeline_v0
+                            exposure: 0
+                            contrast: 1
+                            saturation: 1
+                            crop: null
+                          status: success
+                          fallback_reason: null
+                          export_eligible: true
+                          preview_url: /v1/jobs/job_01JAZ8M4T2K7/candidates/candidate_01JAZ8N2/preview
+                      retake_advice: Lần sau thử đứng gần nguồn sáng dịu.
+                failed:
+                  value:
+                    job_id: job_01JAZ8M4T2K7
+                    status: failed
+                    provider_type: real
+                    error:
+                      code: provider_unavailable
+                      message: Provider hiện không khả dụng.
+                    result: null
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Jobs]
+      operationId: deleteJob
+      summary: Xóa job và dữ liệu liên quan
+      responses:
+        '204':
+          description: Job và dữ liệu phụ thuộc đã xóa; không có body.
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/jobs/{job_id}/candidates/{candidate_id}/preview:
+    parameters:
+      - $ref: '#/components/parameters/JobId'
+      - $ref: '#/components/parameters/CandidateId'
+    get:
+      tags: [Jobs]
+      operationId: getCandidatePreview
+      summary: Tải preview JPEG
+      responses:
+        '200':
+          description: Ảnh preview đã xử lý/chuẩn hóa để so sánh.
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+              example: (binary JPEG)
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/jobs/{job_id}/candidates/{candidate_id}/export:
+    parameters:
+      - $ref: '#/components/parameters/JobId'
+      - $ref: '#/components/parameters/CandidateId'
+    post:
+      tags: [Jobs]
+      operationId: exportCandidate
+      summary: Xuất ảnh đủ độ phân giải
+      responses:
+        '200':
+          description: Ảnh JPEG toàn độ phân giải.
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+              example: (binary JPEG)
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Candidate không đủ điều kiện export (ví dụ ảnh nhỏ hơn 400 px mỗi chiều).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                error:
+                  code: export_not_eligible
+                  message: Candidate không đủ điều kiện xuất ảnh.
+  /v1/jobs/{job_id}/feedback:
+    parameters:
+      - $ref: '#/components/parameters/JobId'
+    post:
+      tags: [Feedback]
+      operationId: submitFeedback
+      summary: Ghi nhận lựa chọn tự nguyện của người dùng
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackInput'
+            example:
+              chosen_candidate_id: candidate_01JAZ8N2
+              preferred_over_original: true
+              reason: Ánh sáng dịu hơn.
+              session_id: session_01JAZ8M4
+      responses:
+        '204':
+          description: Đã lưu feedback; không có response body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /healthz:
+    get:
+      tags: [Health]
+      operationId: healthCheck
+      summary: Kiểm tra dịch vụ
+      responses:
+        '200':
+          description: Dịch vụ đang hoạt động.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+              example:
+                status: ok
+components:
+  parameters:
+    JobId:
+      name: job_id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^job_[A-Za-z0-9_-]+$'
+      example: job_01JAZ8M4T2K7
+    CandidateId:
+      name: candidate_id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^candidate_[A-Za-z0-9_-]+$'
+      example: candidate_01JAZ8N2
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Không hỗ trợ ở phiên bản này; header nếu gửi sẽ bị bỏ qua.
+      schema:
+        type: string
+  headers:
+    RetryAfter:
+      description: Số giây chờ trước khi polling lại; khuyến nghị 2 giây khi job queued/running.
+      schema:
+        type: integer
+        minimum: 1
+      example: 2
+  responses:
+    BadRequest:
+      description: Request không hợp lệ, bao gồm thiếu consent=true.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          examples:
+            consent:
+              value:
+                error:
+                  code: consent_required
+                  message: Cần consent=true để xử lý ảnh.
+            invalid:
+              value:
+                error:
+                  code: invalid_image
+                  message: Không đọc được ảnh tải lên.
+    PayloadTooLarge:
+      description: Ảnh vượt giới hạn 15 MiB.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            error:
+              code: image_too_large
+              message: Kích thước ảnh vượt 15 MiB.
+    UnsupportedMediaType:
+      description: Định dạng không phải JPEG hoặc PNG.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            error:
+              code: unsupported_format
+              message: Chỉ chấp nhận JPEG hoặc PNG.
+    UnprocessableEntity:
+      description: Request parse được nhưng vi phạm quy tắc dữ liệu.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            error:
+              code: invalid_image
+              message: Nội dung ảnh không hợp lệ.
+    NotFound:
+      description: Không tìm thấy job hoặc candidate.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            error:
+              code: job_not_found
+              message: Không tìm thấy job.
+  schemas:
+    Goal:
+      type: string
+      enum: [natural_portrait, vibrant, silhouette, full_body, keep_context, memorial]
+    JobAccepted:
+      type: object
+      required: [job_id, status]
+      properties:
+        job_id:
+          type: string
+          pattern: '^job_[A-Za-z0-9_-]+$'
+        status:
+          type: string
+          enum: [queued]
+    Job:
+      type: object
+      required: [job_id, status, provider_type, error, result]
+      properties:
+        job_id:
+          type: string
+          pattern: '^job_[A-Za-z0-9_-]+$'
+        status:
+          type: string
+          enum: [queued, running, succeeded, failed]
+        provider_type:
+          type: string
+          nullable: true
+          enum: [mock, replay, real]
+        error:
+          type: object
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Error'
+        result:
+          type: object
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Result'
+      description: Khi status=succeeded, result có giá trị; nếu failed thì error có giá trị. Trạng thái queued/running chưa có result. provider_type là provenance của provider VLM thực sự hoàn tất; null nếu không có inference hoàn tất. Nguồn từng candidate nằm ở Candidate.source.
+    Result:
+      type: object
+      required: [analysis, keep_original, candidates, retake_advice]
+      properties:
+        analysis:
+          $ref: '#/components/schemas/Analysis'
+        keep_original:
+          type: object
+          required: [recommended, reason]
+          description: Thông tin compatibility từ output VLM cũ, không dùng để chọn/xếp hạng phong cách. Client không nên trình bày nó như nhãn đề xuất.
+          properties:
+            recommended:
+              type: boolean
+              deprecated: true
+              description: Trường tương thích với output VLM cũ. Client không dùng để chọn/xếp hạng candidate hoặc trình bày nhãn đề xuất.
+            reason:
+              type: string
+              deprecated: true
+              description: Trường tương thích/provenance VLM; không được dùng làm nhãn xếp hạng trong UI.
+        candidates:
+          type: array
+          minItems: 1
+          maxItems: 6
+          description: Luôn có đúng một No-op và từ 0 đến 5 phong cách status=success; số phong cách thực tế có thể nhỏ hơn K nếu selector không tìm đủ ứng viên khác biệt. No-op nằm ngoài K. Server serialization ổn định; app xáo thứ tự hiển thị và gửi shown_order trong feedback.
+          items:
+            $ref: '#/components/schemas/Candidate'
+        retake_advice:
+          type: string
+          nullable: true
+    Analysis:
+      type: object
+      required: [framing, subject_description, background_description, lighting_condition, uncertainty]
+      properties:
+        framing:
+          type: string
+          enum: [close_up, medium_shot, full_body, environmental, unknown]
+        subject_description:
+          type: string
+        background_description:
+          type: string
+        lighting_condition:
+          type: string
+          enum: [well_lit, backlit, low_light, harsh_sunlight, mixed]
+        uncertainty:
+          type: string
+          nullable: true
+    Candidate:
+      type: object
+      required: [candidate_id, source, option_id, name, rationale, requested_recipe, effective_recipe, status, fallback_reason, export_eligible, preview_url]
+      description: Candidate noop là ảnh gốc. Candidate phong cách có thể mang style_id và style_label; hai trường mới tùy chọn để tương thích client cũ. Tên/nhãn chỉ mô tả đặc tính, không xếp hạng chất lượng.
+      properties:
+        candidate_id:
+          type: string
+          pattern: '^candidate_[A-Za-z0-9_-]+$'
+        source:
+          type: string
+          enum: [noop, rule, vlm, learned]
+        style_id:
+          type: string
+          pattern: '^style_[a-z0-9_]+$'
+          description: ID ổn định của kiểu chỉnh sửa, nếu candidate thuộc một phong cách đã định danh.
+          example: style_warm_contrast
+        style_label:
+          type: string
+          minLength: 1
+          maxLength: 80
+          description: Nhãn mô tả trung tính bằng tiếng Việt, nếu có; không dùng từ ngữ đánh giá/xếp hạng.
+          example: Ấm, tương phản cao
+        option_id:
+          type: string
+          nullable: true
+          enum: [option_1, option_2]
+        name:
+          type: string
+        rationale:
+          type: string
+        requested_recipe:
+          $ref: '#/components/schemas/Recipe'
+        effective_recipe:
+          $ref: '#/components/schemas/Recipe'
+        status:
+          type: string
+          enum: [success, fallback_noop, rejected]
+        fallback_reason:
+          type: string
+          nullable: true
+        export_eligible:
+          type: boolean
+        preview_url:
+          type: string
+          format: uri-reference
+    Recipe:
+      oneOf:
+        - $ref: '#/components/schemas/RecipeV0'
+        - $ref: '#/components/schemas/RecipeV1'
+      description: pipeline_v0 luôn hợp lệ; pipeline_v1 mở rộng thêm điều chỉnh tùy chọn. Phiên bản tường minh tránh diễn giải sai công thức cũ.
+      discriminator:
+        propertyName: pipeline_version
+        mapping:
+          pipeline_v0: '#/components/schemas/RecipeV0'
+          pipeline_v1: '#/components/schemas/RecipeV1'
+    RecipeV0:
+      type: object
+      required: [pipeline_version, exposure, contrast, saturation, crop]
+      properties:
+        pipeline_version:
+          type: string
+          enum: [pipeline_v0]
+        exposure:
+          type: number
+          minimum: -1.5
+          maximum: 1.5
+        contrast:
+          type: number
+          minimum: 0.7
+          maximum: 1.3
+        saturation:
+          type: number
+          minimum: 0.8
+          maximum: 1.3
+        crop:
+          type: array
+          nullable: true
+          minItems: 4
+          maxItems: 4
+          items:
+            type: number
+            minimum: 0
+            maximum: 1
+          description: '[ymin, xmin, ymax, xmax], null giữ nguyên khung.'
+      example:
+        pipeline_version: pipeline_v0
+        exposure: 0.1
+        contrast: 1.04
+        saturation: 1.02
+        crop: null
+    RecipeV1:
+      type: object
+      required: [pipeline_version, exposure, contrast, saturation, crop]
+      properties:
+        pipeline_version:
+          type: string
+          enum: [pipeline_v1]
+        exposure:
+          type: number
+          minimum: -1.5
+          maximum: 1.5
+          default: 0
+        contrast:
+          type: number
+          minimum: 0.7
+          maximum: 1.3
+          default: 1
+        saturation:
+          type: number
+          minimum: 0.8
+          maximum: 1.3
+          default: 1
+        crop:
+          type: array
+          nullable: true
+          minItems: 4
+          maxItems: 4
+          items:
+            type: number
+            minimum: 0
+            maximum: 1
+        temperature:
+          type: number
+          minimum: -1
+          maximum: 1
+          default: 0
+        tint:
+          type: number
+          minimum: -1
+          maximum: 1
+          default: 0
+        shadows:
+          type: number
+          minimum: -0.5
+          maximum: 0.5
+          default: 0
+        highlights:
+          type: number
+          minimum: -0.5
+          maximum: 0.5
+          default: 0
+        sharpen:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 0
+        straighten_deg:
+          type: number
+          minimum: -5
+          maximum: 5
+          default: 0
+        local:
+          type: object
+          nullable: true
+          required: [type, value]
+          properties:
+            type:
+              type: string
+            value:
+              type: number
+          additionalProperties: false
+          default: null
+          description: Trường mở rộng đề xuất; semantics và enum type cần chốt trước triển khai processor.
+      description: Mọi trường v1 ngoài pipeline_version đều tùy chọn; trường thiếu tương đương giá trị trung tính. Các trường v0 vẫn bắt buộc.
+      example:
+        pipeline_version: pipeline_v1
+        exposure: 0
+        contrast: 1
+        saturation: 1
+        crop: null
+        temperature: 0.1
+        tint: 0
+        shadows: 0
+        highlights: 0
+        sharpen: 0
+        straighten_deg: 0
+        local: null
+    FeedbackInput:
+      type: object
+      required: [chosen_candidate_id, preferred_over_original, reason, session_id]
+      description: shown_order tùy chọn để tương thích client cũ; khi có, là thứ tự candidate_id thực tế app đã hiển thị, gồm cả noop nếu ảnh gốc được hiển thị.
+      properties:
+        chosen_candidate_id:
+          type: string
+          nullable: true
+          pattern: '^candidate_[A-Za-z0-9_-]+$'
+        preferred_over_original:
+          type: boolean
+          nullable: true
+        reason:
+          type: string
+          maxLength: 500
+        session_id:
+          type: string
+          pattern: '^session_[A-Za-z0-9_-]+$'
+        shown_order:
+          type: array
+          minItems: 1
+          maxItems: 6
+          uniqueItems: true
+          description: Thứ tự hiển thị đã xáo ngẫu nhiên ở app; chỉ gồm candidate_id thuộc kết quả job này.
+          items:
+            type: string
+            pattern: '^candidate_[A-Za-z0-9_-]+$'
+      example:
+        chosen_candidate_id: candidate_01JAZ8N2
+        preferred_over_original: true
+        reason: Ánh sáng dịu hơn.
+        session_id: session_01JAZ8M4
+        shown_order: [candidate_01JAZ8N2]
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum: [invalid_image, unsupported_format, image_too_large, consent_required, job_not_found, export_not_eligible, provider_unavailable]
+        message:
+          type: string
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          $ref: '#/components/schemas/Error'
+      example:
+        error:
+          code: invalid_image
+          message: Không đọc được ảnh tải lên.

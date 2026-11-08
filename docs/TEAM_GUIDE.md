@@ -2,7 +2,7 @@
 
 ## Ý tưởng thống nhất
 
-Người dùng chụp hoặc tải ảnh, chọn mong muốn; VLM phân tích người, cỡ cảnh, ánh sáng và bối cảnh; hệ thống tạo tối đa hai preview chỉnh sửa cùng lựa chọn giữ gốc. Người dùng quyết định ảnh nào phù hợp với mình.
+Người dùng chụp hoặc tải ảnh, chọn mong muốn; VLM phân tích người, cỡ cảnh, ánh sáng và bối cảnh. Thiết kế sản phẩm là hiển thị ảnh gốc cùng 0–5 phong cách chỉnh sửa (mặc định 4, cấu hình 4 hoặc 5); các lựa chọn ngang hàng để người dùng tự quyết, không có phong cách “tốt nhất” do hệ thống đề xuất. VLM vẫn sinh tối đa hai recipe; các nguồn khác có thể đóng góp thêm phong cách. Selector này chưa được triển khai.
 
 MVP ưu tiên ảnh có người. Phong cảnh/đồ vật thuần, chỉnh vùng mặt, xóa vật thể, cá nhân hóa và training là hướng mở rộng cần bằng chứng trước khi làm.
 

@@ -45,7 +45,7 @@ Response gồm:
 
 - `analysis`: cỡ cảnh, chủ thể, nền, ánh sáng, điểm chưa chắc chắn.
 - `keep_original`: có nên giữ gốc và lý do.
-- `recommendations`: 0–2 option, mỗi option có tên, lý do, recipe.
+- `recommendations`: 0–2 option do VLM sinh, mỗi option có tên, lý do, recipe. Đây là giới hạn đầu ra của VLM, không phải số phong cách tối đa mà sản phẩm có thể đưa vào selector.
 - `retake_advice`: lời khuyên chụp lại riêng, có thể null.
 
 Schema chặt chẽ: không nhận field lạ, số phải hữu hạn, option ID duy nhất. Response sai schema không được đưa thẳng vào processor.
@@ -89,7 +89,7 @@ Model thật được lazy-load và tái sử dụng trên cùng provider. Mỗi
 
 Mỗi lượt có thư mục riêng, giữ các preview và `manifest.json`, `vlm_raw_response.json`, `index.html`. Registry ghi requested/effective recipe, source, trạng thái, hash, lý do reject/fallback và phiên bản. Bundle ghi model/prompt/schema/config/timings; replay giữ envelope của lượt gốc riêng.
 
-Các phương án đối chứng No-op và rule luôn dùng cùng processor với AI để so sánh công bằng. Bốn preview trong báo cáo nghiên cứu không có nghĩa giao diện người dùng phải hiển thị bốn lựa chọn.
+Các phương án đối chứng No-op và rule luôn dùng cùng processor với AI để so sánh công bằng. Theo thiết kế bộ lựa chọn, người dùng sẽ thấy ảnh gốc cùng K phong cách hợp lệ (K mặc định 4, cấu hình 4 hoặc 5); số thực tế có thể ít hơn nếu guardrail hoặc lọc độ khác biệt loại ứng viên. Ảnh gốc và các phong cách ngang hàng, không có nhãn xếp hạng hay đề xuất. App xáo thứ tự hiển thị và gửi lại thứ tự đó trong feedback. Thiết kế selector chưa được triển khai.
 
 ## Hướng mở rộng sau pilot
 
