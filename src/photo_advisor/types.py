@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Tuple, Any
 
 # Version identifiers as specified in Codex Review 03 & 04
 PIPELINE_VERSION = "pipeline_v0"
-PROCESSOR_VERSION = "processor_pillow_v0"
+PROCESSOR_VERSION = "processor_numpy_linear_v1"
 GUARDRAIL_VERSION = "guardrail_v0"
 RULE_VERSION = "rule_v0"
 
@@ -29,6 +29,11 @@ CONTRAST_CLAMP_MIN = 0.7
 CONTRAST_CLAMP_MAX = 1.3
 SATURATION_CLAMP_MIN = 0.8
 SATURATION_CLAMP_MAX = 1.3
+TEMPERATURE_CLAMP_MIN, TEMPERATURE_CLAMP_MAX = -1.0, 1.0
+TINT_CLAMP_MIN, TINT_CLAMP_MAX = -1.0, 1.0
+SHADOWS_CLAMP_MIN, SHADOWS_CLAMP_MAX = -0.5, 0.5
+HIGHLIGHTS_CLAMP_MIN, HIGHLIGHTS_CLAMP_MAX = -0.5, 0.5
+SHARPEN_CLAMP_MIN, SHARPEN_CLAMP_MAX = 0.0, 1.0
 
 # Goals
 GOAL_NATURAL = "natural_portrait"
@@ -63,26 +68,44 @@ class Recipe:
     contrast: float          # Pillow Contrast factor
     saturation: float        # Pillow Color factor
     crop: Optional[Tuple[float, float, float, float]] = None  # (ymin, xmin, ymax, xmax) normalized [0, 1]
+    temperature: float = 0.0
+    tint: float = 0.0
+    shadows: float = 0.0
+    highlights: float = 0.0
+    sharpen: float = 0.0
+    straighten_deg: float = 0.0
+    local: None = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Exact machine representation without loss of precision."""
-        return {
+        result = {
             "pipeline_version": self.pipeline_version,
             "exposure": float(self.exposure),
             "contrast": float(self.contrast),
             "saturation": float(self.saturation),
             "crop": list(self.crop) if self.crop is not None else None,
         }
+        if self.pipeline_version == "pipeline_v1":
+            result.update(temperature=self.temperature, tint=self.tint, shadows=self.shadows,
+                highlights=self.highlights, sharpen=self.sharpen,
+                straighten_deg=self.straighten_deg, local=self.local)
+        return result
 
     def to_display_dict(self) -> Dict[str, Any]:
         """Formatted dictionary with rounded values for HTML presentation."""
-        return {
+        result = {
             "pipeline_version": self.pipeline_version,
             "exposure": round(float(self.exposure), 4),
             "contrast": round(float(self.contrast), 4),
             "saturation": round(float(self.saturation), 4),
             "crop": [round(c, 4) for c in self.crop] if self.crop is not None else None,
         }
+        if self.pipeline_version == "pipeline_v1":
+            result.update(temperature=round(self.temperature, 4), tint=round(self.tint, 4),
+                shadows=round(self.shadows, 4), highlights=round(self.highlights, 4),
+                sharpen=round(self.sharpen, 4), straighten_deg=round(self.straighten_deg, 4),
+                local=self.local)
+        return result
 
 
 @dataclass

@@ -38,6 +38,9 @@ from photo_advisor.types import (
     ProcessingResult,
     Recipe,
 )
+from photo_advisor.ops.white_balance import apply_white_balance
+from photo_advisor.ops.tone import apply_shadows, apply_highlights
+from photo_advisor.ops.sharpen import apply_sharpen
 
 
 def compute_sha256(data: bytes) -> str:
@@ -172,8 +175,33 @@ def process_image(
             f"processed for preview only; export_eligible=False (no upscaling permitted)."
         )
 
-    # Step 2: Crop selection
-    if recipe.crop is not None:
+    if recipe.pipeline_version == "pipeline_v1":
+        work = norm_img
+        if recipe.straighten_deg:
+            work = work.rotate(float(recipe.straighten_deg), resample=Image.Resampling.BICUBIC, expand=False)
+        if recipe.crop is not None:
+            ymin, xmin, ymax, xmax = recipe.crop
+            work = work.crop((int(math.floor(xmin*work.width)), int(math.floor(ymin*work.height)), int(math.ceil(xmax*work.width)), int(math.ceil(ymax*work.height))))
+        cropped_input = work
+        input_clipping = calculate_clipping_fractions(cropped_input)
+        encoded = np.asarray(work, dtype=np.float32) / np.float32(255.0)
+        linear = np.where(encoded <= .04045, encoded/12.92, ((encoded+.055)/1.055)**2.4).astype(np.float32)
+        linear = apply_white_balance(linear, recipe.temperature, recipe.tint)
+        if recipe.exposure != 0: linear *= np.float32(2.0 ** float(recipe.exposure))
+        linear = apply_shadows(linear, recipe.shadows)
+        linear = apply_highlights(linear, recipe.highlights)
+        y = np.sum(linear*np.asarray([.2126,.7152,.0722],dtype=np.float32),axis=-1,keepdims=True,dtype=np.float32)
+        if recipe.contrast != 1:
+            yn=.18+np.float32(recipe.contrast)*(y-.18); linear *= np.divide(yn,y,out=np.ones_like(y),where=y>0)
+        if recipe.saturation != 1: linear = y+(linear-y)*np.float32(recipe.saturation)
+        linear = apply_sharpen(linear, recipe.sharpen)
+        srgb=np.where(linear<=.0031308,linear*12.92,1.055*np.maximum(linear,0)**(1/2.4)-.055)
+        final_output=Image.fromarray(np.rint(np.clip(srgb,0,1)*255).astype(np.uint8),"RGB")
+        is_eligible = cropped_input.width >= min_dimension_threshold and cropped_input.height >= min_dimension_threshold
+        dim_ineligible_reason=None if is_eligible else f"dimension_below_{min_dimension_threshold}px ({cropped_input.width}x{cropped_input.height})"
+    else:
+      # Step 2: Crop selection (legacy pipeline_v0 path; preserve unchanged operations)
+      if recipe.crop is not None:
         ymin, xmin, ymax, xmax = recipe.crop
         left = max(0, min(orig_w, int(math.floor(xmin * orig_w))))
         top = max(0, min(orig_h, int(math.floor(ymin * orig_h))))
@@ -185,25 +213,25 @@ def process_image(
         if crop_w < min_dimension_threshold or crop_h < min_dimension_threshold:
             is_eligible = False
         logs.append(f"Applied crop box: ({left}, {top}, {right}, {bottom}) [{crop_w}x{crop_h}px].")
-    else:
+      else:
         cropped_input = norm_img
         logs.append("No crop requested; using full upright image.")
 
     # Measure clipping on normalized cropped input reference
-    input_clipping = calculate_clipping_fractions(cropped_input)
+      input_clipping = calculate_clipping_fractions(cropped_input)
 
     # Step 3: Brightness Enhance (recipe.exposure: multiplier = 2.0 ** exposure)
-    multiplier = 2.0 ** float(recipe.exposure)
-    bright_img = ImageEnhance.Brightness(cropped_input).enhance(multiplier)
-    logs.append(f"Applied Brightness.enhance({multiplier:.6f}) [recipe exposure {recipe.exposure:.6f}].")
+      multiplier = 2.0 ** float(recipe.exposure)
+      bright_img = ImageEnhance.Brightness(cropped_input).enhance(multiplier)
+      logs.append(f"Applied Brightness.enhance({multiplier:.6f}) [recipe exposure {recipe.exposure:.6f}].")
 
     # Step 4: Contrast Enhance
-    contrast_img = ImageEnhance.Contrast(bright_img).enhance(float(recipe.contrast))
-    logs.append(f"Applied Contrast.enhance({recipe.contrast:.6f}).")
+      contrast_img = ImageEnhance.Contrast(bright_img).enhance(float(recipe.contrast))
+      logs.append(f"Applied Contrast.enhance({recipe.contrast:.6f}).")
 
     # Step 5: Color (Saturation) Enhance
-    final_output = ImageEnhance.Color(contrast_img).enhance(float(recipe.saturation))
-    logs.append(f"Applied Color.enhance({recipe.saturation:.6f}).")
+      final_output = ImageEnhance.Color(contrast_img).enhance(float(recipe.saturation))
+      logs.append(f"Applied Color.enhance({recipe.saturation:.6f}).")
 
     # Step 6: Delta clipping guardrail (compared against same cropped region of normalized input)
     output_clipping = calculate_clipping_fractions(final_output)
