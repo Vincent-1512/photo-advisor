@@ -29,7 +29,8 @@ from photo_advisor.types import (
 )
 
 
-ALLOWED_KEYS = {"pipeline_version", "exposure", "contrast", "saturation", "crop"}
+V1_KEYS = {"temperature", "tint", "shadows", "highlights", "sharpen", "straighten_deg", "local"}
+ALLOWED_KEYS = {"pipeline_version", "exposure", "contrast", "saturation", "crop"} | V1_KEYS
 
 
 def _is_valid_numeric(val: Any) -> bool:
@@ -86,7 +87,14 @@ def validate_and_clamp_recipe(
         )
 
     # 2. Required keys check
-    missing_keys = ALLOWED_KEYS - set(raw_recipe.keys())
+    req_version = raw_recipe.get("pipeline_version")
+    allowed = ({"pipeline_version", "exposure", "contrast", "saturation", "crop"} |
+               (V1_KEYS if req_version == "pipeline_v1" else set()))
+    extra_keys = set(raw_recipe) - allowed
+    if extra_keys:
+        return ValidationResult(is_valid=False, requested_recipe=sanitized_requested,
+            rejection_reason=f"Unknown keys in recipe: {sorted(extra_keys)}. Strict schema required.")
+    missing_keys = {"pipeline_version", "exposure", "contrast", "saturation", "crop"} - set(raw_recipe.keys())
     if missing_keys:
         return ValidationResult(
             is_valid=False,
@@ -95,8 +103,7 @@ def validate_and_clamp_recipe(
         )
 
     # 3. Pipeline version check
-    req_version = raw_recipe.get("pipeline_version")
-    if req_version != PIPELINE_VERSION:
+    if req_version not in {"pipeline_v0", "pipeline_v1"}:
         return ValidationResult(
             is_valid=False,
             requested_recipe=sanitized_requested,
@@ -104,6 +111,18 @@ def validate_and_clamp_recipe(
         )
 
     warnings: List[str] = []
+    bounds = {"temperature":(-1.,1.),"tint":(-1.,1.),"shadows":(-.5,.5),"highlights":(-.5,.5),"sharpen":(0.,1.),"straighten_deg":(-5.,5.)}
+    v1_values = {}
+    if req_version == "pipeline_v1":
+        for key, (lo, hi) in bounds.items():
+            value = raw_recipe.get(key, 0.0)
+            if not _is_valid_numeric(value):
+                return ValidationResult(is_valid=False, requested_recipe=sanitized_requested, rejection_reason=f"Invalid {key}: finite number required; bool forbidden.")
+            requested = float(value); effective = min(hi, max(lo, requested)); v1_values[key] = effective
+            if requested != effective:
+                warnings.append(f"Clamped {key} from requested {requested:.4f} to effective {effective:.4f} [{lo}, {hi}]")
+        if raw_recipe.get("local") is not None:
+            return ValidationResult(is_valid=False, requested_recipe=sanitized_requested, rejection_reason="local must be null")
 
     # 4. Exposure validation & clamping
     raw_exp = raw_recipe.get("exposure")
@@ -232,11 +251,12 @@ def validate_and_clamp_recipe(
         eff_crop = (ymin, xmin, ymax, xmax)
 
     effective_recipe = Recipe(
-        pipeline_version=PIPELINE_VERSION,
+        pipeline_version=req_version,
         exposure=eff_exp,
         contrast=eff_con,
         saturation=eff_sat,
         crop=eff_crop,
+        **v1_values,
     )
 
     return ValidationResult(
