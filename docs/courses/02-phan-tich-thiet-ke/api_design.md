@@ -107,3 +107,9 @@ openapi-generator-cli generate \
 ```
 
 Cần thử với phiên bản OpenAPI Generator được nhóm khóa; tên generator/kiểu nullable có thể thay đổi theo phiên bản. Chưa chạy sinh client vì repo chưa có app Dart.
+
+## Trạng thái triển khai
+
+Backend FastAPI skeleton hiện implement các endpoint đã chốt: `POST /v1/jobs`, `GET /v1/jobs/{job_id}`, `DELETE /v1/jobs/{job_id}`, `GET /v1/jobs/{job_id}/candidates/{candidate_id}/preview`, `POST /v1/jobs/{job_id}/candidates/{candidate_id}/export`, `POST /v1/jobs/{job_id}/feedback`, và `GET /healthz`. Job xử lý đồng bộ; response tạo job vẫn tuân theo hợp đồng 202/queued trong khi GET trả trạng thái đã xử lý.
+
+Giới hạn: chưa có authentication, authorization, rate-limit, async queue, idempotency hay selector đa candidate hoàn chỉnh. Backend hiện gọi CLI pipeline ở chế độ fixture; Analysis API dùng giá trị unknown/neutral vì pipeline chưa cung cấp analysis ổn định. Preview được lưu ngoài SQLite dưới thư mục storage của job và chuyển sang JPEG khi GET. Export hiện lưu JPEG từ preview pipeline và trả binary `image/jpeg` theo OpenAPI; đây chưa phải export độ phân giải gốc riêng. Storage mặc định là `backend/data/files`, database là `backend/data/photo_advisor.sqlite3`; có thể đổi qua `PHOTO_ADVISOR_STORAGE` và `PHOTO_ADVISOR_DB`.
