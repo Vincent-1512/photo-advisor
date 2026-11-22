@@ -1,6 +1,6 @@
 # Đặc tả kỹ thuật pipeline_v1
 
-**Trạng thái:** đề xuất cho cổng G1; chưa triển khai và chưa đo hiệu năng. **Nguồn:** thiết kế, chưa có ảnh hoặc kết quả VLM thật để đánh giá. Mục tiêu là bổ sung công thức xác định, có thể tái lập, giữ hợp đồng pipeline_v0 và không tự động khẳng định ảnh đã đẹp hơn.
+**Trạng thái:** đã triển khai các phép toàn ảnh trong processor v1; local mask và benchmark hiệu năng còn mở. **Nguồn:** thiết kế, chưa có ảnh hoặc kết quả VLM thật để đánh giá. Mục tiêu là bổ sung công thức xác định, có thể tái lập, giữ hợp đồng pipeline_v0 và không tự động khẳng định ảnh đã đẹp hơn.
 
 ## 1. Phạm vi và quy ước
 

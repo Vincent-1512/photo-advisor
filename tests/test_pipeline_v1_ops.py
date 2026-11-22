@@ -25,6 +25,13 @@ class PipelineV1OpsTests(unittest.TestCase):
         self.assertEqual(result.status,"success")
         np.testing.assert_array_equal(np.asarray(Image.open(io.BytesIO(result.output_image_bytes))),a)
 
+    def test_saturation_preserves_gray_after_contrast(self):
+        data = png(np.full((12, 12, 3), 180, np.uint8))
+        neutral = process_image(data, recipe(contrast=1.3), 1)
+        saturated = process_image(data, recipe(contrast=1.3, saturation=1.3), 1)
+        self.assertEqual(saturated.status, "success")
+        self.assertEqual(neutral.output_sha256, saturated.output_sha256)
+
     def test_exposure_and_shadows_are_monotonic(self):
         a=np.full((24,24,3),64,dtype=np.uint8); data=png(a)
         low=process_image(data,recipe(),1); high=process_image(data,recipe(exposure=.5),1)

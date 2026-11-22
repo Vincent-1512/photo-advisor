@@ -87,7 +87,7 @@ photo-advisor/
 
 ## Phạm vi và giới hạn
 
-- Engine hiện có bốn thao tác: độ sáng, tương phản, bão hòa, crop. Chỉnh toàn ảnh; chưa có mask để chỉnh riêng mặt/người/nền.
+- Engine v0 hỗ trợ độ sáng, tương phản, bão hòa và crop. Bản v1 bổ sung cân bằng trắng, vùng tối/sáng, làm nét và xoay. Chỉnh toàn ảnh; chưa có mask để chỉnh riêng mặt/người/nền.
 - Lời khuyên chụp lại là văn bản; không dựng preview giả cho góc chụp chưa tồn tại.
 - Luôn có phương án giữ gốc. Preview No-op là ảnh đã chuẩn hóa; file gốc không bị ghi đè.
 - Guardrails kiểm tra công thức và mức clipping; chúng không thay thế đánh giá thẩm mỹ của người dùng.

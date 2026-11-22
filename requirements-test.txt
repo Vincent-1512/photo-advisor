@@ -2,4 +2,4 @@
 -r requirements.txt
 psutil>=5.9,<8
 torch>=2.5,<3
-transformers>=4.49,<6
+transformers>=4.49,<5
