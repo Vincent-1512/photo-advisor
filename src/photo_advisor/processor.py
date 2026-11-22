@@ -193,7 +193,10 @@ def process_image(
         y = np.sum(linear*np.asarray([.2126,.7152,.0722],dtype=np.float32),axis=-1,keepdims=True,dtype=np.float32)
         if recipe.contrast != 1:
             yn=.18+np.float32(recipe.contrast)*(y-.18); linear *= np.divide(yn,y,out=np.ones_like(y),where=y>0)
-        if recipe.saturation != 1: linear = y+(linear-y)*np.float32(recipe.saturation)
+        if recipe.saturation != 1:
+            luma = np.sum(linear * np.asarray([.2126, .7152, .0722], dtype=np.float32),
+                          axis=-1, keepdims=True)
+            linear = luma + (linear - luma) * np.float32(recipe.saturation)
         linear = apply_sharpen(linear, recipe.sharpen)
         srgb=np.where(linear<=.0031308,linear*12.92,1.055*np.maximum(linear,0)**(1/2.4)-.055)
         final_output=Image.fromarray(np.rint(np.clip(srgb,0,1)*255).astype(np.uint8),"RGB")
