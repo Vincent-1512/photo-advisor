@@ -44,3 +44,6 @@ data_science/**/*.heic
 !data_science/tests/fixtures/**/*.jpeg
 !data_science/tests/fixtures/**/*.png
 !data_science/tests/fixtures/**/*.heic
+
+# Uploaded originals, generated previews and exports
+/backend/data/

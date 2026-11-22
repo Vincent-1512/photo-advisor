@@ -1,7 +1,7 @@
 """Pydantic response and request models aligned with OpenAPI schemas."""
 from enum import Enum
-from typing import Any, Optional
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Annotated, Any, Optional
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 class Goal(str, Enum):
     natural_portrait="natural_portrait"; vibrant="vibrant"; silhouette="silhouette"; full_body="full_body"; keep_context="keep_context"; memorial="memorial"
@@ -20,6 +20,19 @@ class Candidate(BaseModel):
     export_eligible: bool; preview_url: str; style_id: Optional[str]=None; style_label: Optional[str]=None
 class Result(BaseModel): analysis: Optional[Analysis]=None; keep_original: dict[str,Any]; candidates: list[Candidate]; retake_advice: Optional[str]
 class Job(BaseModel): job_id: str; status: str; provider_type: Optional[str]; error: Optional[Error]; result: Optional[Result]
+CandidateId = Annotated[str, Field(pattern=r"^candidate_[A-Za-z0-9_-]+$")]
+
+
 class FeedbackInput(BaseModel):
-    chosen_candidate_id: Optional[str]; preferred_over_original: Optional[bool]; reason: str=Field(max_length=500); session_id: str
-    shown_order: Optional[list[str]]=Field(default=None,min_length=1,max_length=6)
+    chosen_candidate_id: Optional[CandidateId]
+    preferred_over_original: Optional[bool]
+    reason: str = Field(max_length=500)
+    session_id: str = Field(pattern=r"^session_[A-Za-z0-9_-]+$")
+    shown_order: Optional[list[CandidateId]] = Field(default=None, min_length=1, max_length=6)
+
+    @field_validator("shown_order")
+    @classmethod
+    def unique_candidates(cls, order):
+        if order and len(order) != len(set(order)):
+            raise ValueError("shown_order chứa candidate trùng lặp.")
+        return order
