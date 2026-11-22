@@ -1,6 +1,6 @@
 # Đặc tả bộ phong cách để người dùng lựa chọn
 
-**Trạng thái:** thiết kế hợp đồng, chưa triển khai. Phần `learned` là kế hoạch, chưa triển khai hoặc huấn luyện. Tài liệu này định nghĩa cách gom và chọn phong cách từ nhiều nguồn; hệ thống không chấm điểm chất lượng để chọn hộ người dùng.
+**Trạng thái:** API đã triển khai bộ chọn từ rule baseline và năm preset v1, mặc định tối đa bốn style. Phần `learned` là kế hoạch, chưa triển khai hoặc huấn luyện. Tài liệu này định nghĩa cách gom và chọn phong cách từ nhiều nguồn; hệ thống không chấm điểm chất lượng để chọn hộ người dùng.
 
 ## 1. Mục tiêu và phạm vi
 

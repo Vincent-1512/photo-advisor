@@ -1,7 +1,8 @@
 """Synchronous FastAPI adapter for the existing Photo Advisor pipeline."""
-import hashlib, io, json, shutil, sys, uuid, datetime
+import hashlib, io, json, logging, os, shutil, sys, uuid, datetime
 from pathlib import Path
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Response, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response as BinaryResponse
 from PIL import Image
 from . import db
@@ -10,6 +11,7 @@ from .models import *
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/"src"))
 from photo_advisor.cli import run_pipeline
+from photo_advisor.style_selection import build_styles
 
 app=FastAPI(title="Photo Advisor API",version="1.0.0")
 @app.exception_handler(HTTPException)
@@ -17,6 +19,16 @@ async def api_error_handler(request: Request, exc: HTTPException):
     if isinstance(exc.detail, dict) and "error" in exc.detail:
         return Response(content=json.dumps(exc.detail),status_code=exc.status_code,media_type="application/json")
     return Response(content=json.dumps({"error":{"code":"invalid_image","message":str(exc.detail)}}),status_code=exc.status_code,media_type="application/json")
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError):
+    body = {"error": {"code": "invalid_image", "message": exc.errors()[0]["msg"]}}
+    return Response(content=json.dumps(body), status_code=422, media_type="application/json")
+
+
+STYLE_COUNT = int(os.environ.get("PHOTO_ADVISOR_STYLE_COUNT", "4"))
+if STYLE_COUNT not in (4, 5):
+    raise ValueError("PHOTO_ADVISOR_STYLE_COUNT phải bằng 4 hoặc 5")
+
 MAX_IMAGE=15*1024*1024
 def now(): return datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00","Z")
 def error(code,msg,status): raise HTTPException(status_code=status,detail={"error":{"code":code,"message":msg}})
@@ -28,7 +40,7 @@ def get_job(job_id):
     with db.connect() as c:
         row=c.execute("select * from jobs where job_id=?",(job_id,)).fetchone()
         if not row: error("job_not_found","Không tìm thấy job.",404)
-        cands=c.execute("select * from candidates where job_id=? order by created_at,candidate_id",(job_id,)).fetchall()
+        cands=c.execute("select * from candidates where job_id=? order by (source <> 'noop'),style_id,candidate_id",(job_id,)).fetchall()
     result=None
     if row["status"]=="succeeded":
         result={"analysis":{"framing":"unknown","subject_description":"","background_description":"","lighting_condition":"mixed","uncertainty":"Pipeline hiện không cung cấp analysis chuẩn hóa."},"keep_original":{"recommended":False,"reason":"Compatibility field; not used for ranking."},"candidates":[],"retake_advice":None}
@@ -41,9 +53,9 @@ def get_job(job_id):
 def healthz(): return {"status":"ok"}
 
 @app.post("/v1/jobs",status_code=202,response_model=JobAccepted)
-async def create_job(image: UploadFile=File(...),goal: Goal=Form(...),consent: bool=Form(...)):
+def create_job(image: UploadFile=File(...),goal: Goal=Form(...),consent: bool=Form(...)):
     if consent is not True: error("consent_required","Cần consent=true để xử lý ảnh.",400)
-    payload=await image.read(MAX_IMAGE+1)
+    payload=image.file.read(MAX_IMAGE+1)
     if len(payload)>MAX_IMAGE: error("image_too_large","Kích thước ảnh vượt 15 MiB.",413)
     if image.content_type not in ("image/jpeg","image/png"): error("unsupported_format","Chỉ chấp nhận JPEG hoặc PNG.",415)
     try:
@@ -59,15 +71,17 @@ async def create_job(image: UploadFile=File(...),goal: Goal=Form(...),consent: b
         out=stored(f"{job}/pipeline"); manifest=run_pipeline(payload,goal.value,str(out),input_file_path=str(src),input_source="user_file",provider_type="fixtures",run_id=job)
         meta=manifest.get("metadata",{}); provider=meta.get("vlm_summary",{}).get("provider_type")
         provider={"local_hf":"real","mock":"mock","replay":"replay"}.get(provider)
+        options = build_styles(payload, goal.value, out, manifest["candidates"], limit=STYLE_COUNT)
         with db.connect() as c:
-            for n,item in enumerate(manifest.get("candidates",[])):
+            for item in options:
                 source=item.get("source_type","rule_v0"); source="rule" if source.startswith("rule") else "noop" if source=="noop" else "vlm" if source.startswith("vlm") else "rule"
                 cid="candidate_"+uuid.uuid4().hex[:12]; preview=item.get("preview_filename") or "preview_noop.png"; p=out/preview
                 if not p.exists(): p=out/"preview_noop.png"
                 preview_rel=f"{job}/pipeline/{p.name}"
-                c.execute("insert into candidates values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(cid,job,source,None,None,item.get("option_id"),item.get("source_name") or source,item.get("notes") or "",json.dumps(item.get("requested_recipe") or {},allow_nan=False),json.dumps(item.get("effective_recipe") or {},allow_nan=False),item.get("status","success"),item.get("fallback_reason"),int(bool(item.get("export_eligible"))),preview_rel,item.get("output_sha256"),ts))
+                c.execute("insert into candidates values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(cid,job,source,item.get("style_id"),item.get("style_label"),item.get("option_id"),item.get("source_name") or source,item.get("notes") or "",json.dumps(item.get("requested_recipe") or {},allow_nan=False),json.dumps(item.get("effective_recipe") or {},allow_nan=False),item.get("status","success"),item.get("fallback_reason"),int(bool(item.get("export_eligible"))),preview_rel,item.get("output_sha256"),ts))
             c.execute("update jobs set status='succeeded',provider_type=?,updated_at=? where job_id=?",(provider,now(),job))
     except Exception:
+        logging.getLogger(__name__).exception("Pipeline failed for job %s", job)
         with db.connect() as c: c.execute("update jobs set status='failed',error_code='provider_unavailable',error_message='Pipeline hiện không khả dụng.',updated_at=? where job_id=?",(now(),job))
     return {"job_id":job,"status":"queued"}
 
@@ -79,27 +93,32 @@ def delete_job(job_id:str):
     with db.connect() as c:
         row=c.execute("select 1 from jobs where job_id=?",(job_id,)).fetchone()
         if not row: error("job_not_found","Không tìm thấy job.",404)
+        directory = stored(job_id)
+        if directory.exists():
+            shutil.rmtree(directory)
         c.execute("delete from jobs where job_id=?",(job_id,))
-    shutil.rmtree(stored(job_id),ignore_errors=True); return Response(status_code=204)
+    return Response(status_code=204)
 
 def candidate(job_id,candidate_id):
     with db.connect() as c: x=c.execute("select * from candidates where job_id=? and candidate_id=?",(job_id,candidate_id)).fetchone()
     if not x: error("job_not_found","Không tìm thấy job hoặc candidate.",404)
     return x
-def jpeg_response(path):
+def jpeg_response(path, *, preview=False):
     try:
         with Image.open(path) as im:
-            b=io.BytesIO(); im.convert("RGB").save(b,"JPEG",quality=92); return BinaryResponse(b.getvalue(),media_type="image/jpeg")
+            if preview:
+                im.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
+            buffer = io.BytesIO()
+            im.convert("RGB").save(buffer, "JPEG", quality=92 if preview else 95)
+            return BinaryResponse(buffer.getvalue(), media_type="image/jpeg")
     except Exception: error("job_not_found","Không tìm thấy ảnh.",404)
 @app.get("/v1/jobs/{job_id}/candidates/{candidate_id}/preview")
-def preview(job_id:str,candidate_id:str): return jpeg_response(stored(candidate(job_id,candidate_id)["preview_relative_path"]))
+def preview(job_id:str,candidate_id:str): return jpeg_response(stored(candidate(job_id,candidate_id)["preview_relative_path"]), preview=True)
 @app.post("/v1/jobs/{job_id}/candidates/{candidate_id}/export")
 def export(job_id:str,candidate_id:str):
     x=candidate(job_id,candidate_id)
     if not x["export_eligible"]: raise HTTPException(409,detail={"error":{"code":"export_not_eligible","message":"Candidate không đủ điều kiện xuất ảnh."}})
-    original=stored(x["preview_relative_path"]); dest=stored(f"{job_id}/exports/{candidate_id}.jpg"); dest.parent.mkdir(parents=True,exist_ok=True)
-    with Image.open(original) as im: im.convert("RGB").save(dest,"JPEG",quality=95)
-    return jpeg_response(dest)
+    return jpeg_response(stored(x["preview_relative_path"]))
 
 @app.post("/v1/jobs/{job_id}/feedback",status_code=204)
 def feedback(job_id:str,payload:FeedbackInput):

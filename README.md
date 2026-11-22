@@ -10,9 +10,12 @@ MVP ưu tiên **ảnh có người trong bối cảnh thực tế**: cận mặt
 |---|---|
 | Pipeline Python, rule baseline, mock/replay và guardrails | Đã triển khai và kiểm thử offline |
 | Notebook Colab tích hợp Qwen2.5-VL | Có sẵn, cần xác minh trên phiên GPU thực tế |
-| Kiểm thử trước khi dọn repository | 104 tests đạt trong lần review offline |
-| Kết quả Colab đã review ngày 10/10/2026 | Mock trên ảnh tổng hợp; chưa chứng minh chất lượng VLM thật |
-| App điện thoại, API, cá nhân hóa, training | Chưa triển khai |
+| API FastAPI + SQLite | Tạo/xóa job, trả ảnh gốc và style, preview, export JPEG và lưu phản hồi |
+| Khoa học dữ liệu | Thí nghiệm khôi phục phơi sáng tổng hợp và báo cáo lựa chọn theo goal/vị trí |
+| Ứng dụng Flutter | Chọn/chụp ảnh, consent, so sánh, phản hồi, lịch sử và lưu JPEG |
+| Đánh giá trên người dùng và GPU | Cần ảnh có consent, pilot độc lập và bundle inference thật |
+
+**Chạy demo liên môn.** Bắt đầu với [hướng dẫn Flutter và backend](mobile/README.md), gửi một lượt phản hồi rồi chạy [báo cáo Khoa học dữ liệu](data_science/README.md). [Sơ đồ hệ thống và ma trận nghiệm thu](docs/courses/02-phan-tich-thiet-ke/models.md) mô tả đường đi của dữ liệu.
 
 `mock` kiểm tra luồng chạy bằng phản hồi mẫu. Chỉ khi provider thật thực hiện inference mới có thể đánh giá AI nhìn ảnh đúng và đề xuất hữu ích hay không. Không dùng số token/latency mô phỏng làm benchmark.
 
@@ -36,7 +39,7 @@ PYTHONPATH=src python -m photo_advisor.cli \
   --output-dir work/demo-mock-01
 ```
 
-Mở `work/demo-mock-01/index.html` để so sánh ảnh gốc, rule baseline và phương án mock mà pipeline hiện có tạo ra. Bộ chọn 0–5 phong cách là thiết kế hợp đồng tương lai, chưa được triển khai trong pipeline. Khi chạy lại, chọn thư mục output mới: pipeline chủ động từ chối ghi đè artifacts.
+Mở `work/demo-mock-01/index.html` để so sánh ảnh gốc, rule baseline và phương án mock mà pipeline hiện có tạo ra. CLI xuất báo cáo chẩn đoán của pipeline. Bộ chọn phong cách chạy ở luồng API phục vụ ứng dụng. Khi chạy lại, chọn thư mục output mới: pipeline chủ động từ chối ghi đè artifacts.
 
 Chạy với ảnh JPEG/PNG của bạn nhưng vẫn dùng mock:
 

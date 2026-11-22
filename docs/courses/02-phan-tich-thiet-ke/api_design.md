@@ -2,7 +2,7 @@
 
 ## Phạm vi và đầu vào
 
-Đây là hợp đồng đề xuất cho cổng G1, chưa phải API/backend đã triển khai. Tài liệu SAD-2 gồm ERD và `models.md` chưa được cung cấp trong workspace; mô hình bảng dưới đây được suy ra từ BLOCK-0 và manifest pipeline hiện có. Cần đối chiếu lại với SAD-2 khi tài liệu đó sẵn sàng.
+Hợp đồng G1 được triển khai trong FastAPI và SQLite. [ERD, luồng job và tiêu chí nghiệm thu](models.md).
 
 - OpenAPI: [`docs/contracts/openapi.yaml`](../../contracts/openapi.yaml), OpenAPI 3.0.3.
 - SQLite: [`backend/db/schema.sql`](../../../backend/db/schema.sql).
@@ -81,7 +81,7 @@ Không lưu bytes ảnh trong DB. `image_relative_path`, `preview_relative_path`
 | feedback | Không có | Chưa có thu phản hồi trong pipeline; bảng/API là phần mới. |
 | `shown_order` | Không có | Trường API tùy chọn mới. Backend lưu từng candidate theo thứ tự trong bảng `feedback_shown_order`; app gửi danh sách ID thực sự hiển thị, gồm cả No-op khi có. |
 
-Các trường manifest nội bộ như model config, token, latency, timings, prompt hash, raw response và logs không được đưa vào Result công khai theo BLOCK-0. Không được dùng các con số mock để suy ra hiệu năng VLM thật. Hợp đồng selector/feedback là đề xuất, chưa có backend hoặc app triển khai; chi tiết thuật toán nằm trong [candidate_selection_spec.md](../01-xu-ly-anh/candidate_selection_spec.md). Enum `source` được mở rộng thêm `learned`; client exhaustive enum cũ cần xử lý giá trị chưa biết dù `style_id`, `style_label` và `shown_order` đều là optional.
+Các trường manifest nội bộ như model config, token, latency, timings, prompt hash, raw response và logs không được đưa vào Result công khai theo BLOCK-0. Không được dùng các con số mock để suy ra hiệu năng VLM thật. Backend triển khai selector nguồn rule và app gửi feedback kèm thứ tự hiển thị; chi tiết thuật toán nằm trong [candidate_selection_spec.md](../01-xu-ly-anh/candidate_selection_spec.md). Enum `source` được mở rộng thêm `learned`; client exhaustive enum cũ cần xử lý giá trị chưa biết dù `style_id`, `style_label` và `shown_order` đều là optional.
 
 ## Kiểm tra spec và sinh Dart client
 
@@ -106,10 +106,10 @@ openapi-generator-cli generate \
   -o mobile/generated/photo_advisor_api
 ```
 
-Cần thử với phiên bản OpenAPI Generator được nhóm khóa; tên generator/kiểu nullable có thể thay đổi theo phiên bản. Chưa chạy sinh client vì repo chưa có app Dart.
+Cần thử với phiên bản OpenAPI Generator được nhóm khóa; tên generator/kiểu nullable có thể thay đổi theo phiên bản. App Flutter dùng PhotoApi viết bằng Dart.
 
 ## Trạng thái triển khai
 
 Backend FastAPI skeleton hiện implement các endpoint đã chốt: `POST /v1/jobs`, `GET /v1/jobs/{job_id}`, `DELETE /v1/jobs/{job_id}`, `GET /v1/jobs/{job_id}/candidates/{candidate_id}/preview`, `POST /v1/jobs/{job_id}/candidates/{candidate_id}/export`, `POST /v1/jobs/{job_id}/feedback`, và `GET /healthz`. Job xử lý đồng bộ; response tạo job vẫn tuân theo hợp đồng 202/queued trong khi GET trả trạng thái đã xử lý.
 
-Giới hạn: chưa có authentication, authorization, rate-limit, async queue, idempotency hay selector đa candidate hoàn chỉnh. Backend hiện gọi CLI pipeline ở chế độ fixture; Analysis API dùng giá trị unknown/neutral vì pipeline chưa cung cấp analysis ổn định. Preview được lưu ngoài SQLite dưới thư mục storage của job và chuyển sang JPEG khi GET. Export hiện lưu JPEG từ preview pipeline và trả binary `image/jpeg` theo OpenAPI; đây chưa phải export độ phân giải gốc riêng. Storage mặc định là `backend/data/files`, database là `backend/data/photo_advisor.sqlite3`; có thể đổi qua `PHOTO_ADVISOR_STORAGE` và `PHOTO_ADVISOR_DB`.
+Backend demo chạy đồng bộ, chưa có xác thực, queue bền vững, rate-limit và idempotency. Nguồn style là rule. Provider VLM để null khi không chạy inference. Preview JPEG thu nhỏ để hiển thị và export JPEG lấy từ ảnh đã xử lý đủ kích thước. Storage và DB được cấu hình qua PHOTO_ADVISOR_STORAGE và PHOTO_ADVISOR_DB.

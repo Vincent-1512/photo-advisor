@@ -34,3 +34,35 @@ def test_upload_validation(tmp_path,monkeypatch):
     setup_backend(tmp_path,monkeypatch); c=TestClient(main.app)
     assert c.post("/v1/jobs",data={"goal":"natural_portrait","consent":"false"},files={"image":("a.png",png_bytes(),"image/png")}).status_code==400
     assert c.post("/v1/jobs",data={"goal":"natural_portrait","consent":"true"},files={"image":("a.webp",b"bad","image/webp")}).status_code==415
+
+
+def test_pipeline_feedback_and_research_report(tmp_path, monkeypatch):
+    from data_science.feedback_report import summarize
+
+    monkeypatch.setattr(db, "DB_PATH", tmp_path / "study.sqlite3")
+    monkeypatch.setattr(db, "STORAGE", tmp_path / "images")
+    client = TestClient(main.app)
+    accepted = client.post("/v1/jobs", data={"goal": "vibrant", "consent": "true"},
+                           files={"image": ("sample.png", png_bytes(), "image/png")})
+    assert accepted.status_code == 202
+    path = "/v1/jobs/" + accepted.json()["job_id"]
+    job = client.get(path).json()
+    assert job["status"] == "succeeded"
+    candidates = job["result"]["candidates"]
+    assert candidates[0]["source"] == "noop"
+    assert 1 < len(candidates) <= 5
+    assert len({c["style_id"] for c in candidates}) == len(candidates)
+    chosen = next(c for c in candidates if c["source"] == "rule")
+    order = [c["candidate_id"] for c in candidates]
+    payload = {"session_id": "session_demo", "reason": "", "preferred_over_original": None,
+               "chosen_candidate_id": chosen["candidate_id"], "shown_order": order}
+    for invalid in ({"session_id": "invalid"}, {"shown_order": [order[0], order[0]]}):
+        assert client.post(path + "/feedback", json={**payload, **invalid}).status_code == 422
+    assert client.post(path + "/feedback", json=payload).status_code == 204
+    report = summarize(db.DB_PATH)
+    assert report["responses"] == 1 and report["preference_share"] is None
+    assert sum(p["selections"] for p in report["positions"]) == 1
+    assert sum(p["impressions"] for p in report["positions"]) == len(order)
+    assert report["choices"][0]["chosen_source"] == "rule"
+    assert client.delete(path).status_code == 204
+    assert summarize(db.DB_PATH)["responses"] == 0
