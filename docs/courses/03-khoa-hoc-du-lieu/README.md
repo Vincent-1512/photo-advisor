@@ -1,7 +1,3 @@
-# Môn 3 - Khoa học dữ liệu
+# Khoa học dữ liệu
 
-Mục đích: tài liệu giao thức dữ liệu, nhãn, thực nghiệm và đánh giá.
-
-Chủ sở hữu: nhóm môn 3.
-
-Cách chạy: chưa có.
+[Công cụ và cách đọc báo cáo phản hồi](../../../data_science/README.md). [Thiết kế pilot và bảng tiêu chí đánh giá ảnh](../../EVALUATION.md). Dữ liệu đầu vào là phản hồi do backend ghi nhận. Tách riêng lượt thử phần mềm trước khi tính kết quả pilot.
